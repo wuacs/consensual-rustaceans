@@ -1,0 +1,7 @@
+[package]
+name = "paxos-state-machine"
+version = "0.1.0"
+edition = "2021"
+authors = ["Dario Bekic"]
+license = "MIT"
+
