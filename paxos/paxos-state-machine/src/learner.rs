@@ -21,18 +21,15 @@ where
             chosen: HashMap::new(),
         }
     }
-    /// Optional: query if we already learned for a given proposal id.
     pub fn get_chosen(&self, pid: ProposalId) -> Option<&V> {
         self.chosen.get(&pid)
     }
-    /// Record an Accepted from `from` for (pid, v). Returns Some(v) if this crosses quorum now.
     fn record_accepted(&mut self, from: NodeId, pid: ProposalId, v: V) -> Option<V> {
         // If we already chose for this pid, ignore further acks.
         if self.chosen.contains_key(&pid) {
             return None;
         }
         let entry = self.acks.entry(pid).or_insert_with(HashSet::new);
-        // Deduplicate per-acceptor
         if !entry.insert(from) {
             return None;
         }
@@ -46,7 +43,6 @@ where
         None
     }
 }
-/// Plug into your existing event trait.
 impl<V> HandlesEvents<V> for Learner<V>
 where
     V: Clone + Eq + Hash,
@@ -56,12 +52,8 @@ where
     }
     fn on_message(&mut self, from: NodeId, msg: PaxosMsg<V>) -> Vec<Action<V>> {
         match msg {
-            // Acceptors notify learners when they accept a value.
-            // Adjust the variant/fields to your PaxosMsg definition if they differ.
             PaxosMsg::Accepted { proposal } => {
                 if let Some(chosen_v) = self.record_accepted(from, proposal.id, proposal.value.clone()) {
-                    // Emit local "chosen" action. If you also want to announce to others,
-                    // you can add Action::Send { to, msg: PaxosMsg::Chosen { ... } } here.
                     return vec![Action::ChoseValue { v: chosen_v }];
                 }
                 vec![]
@@ -70,7 +62,6 @@ where
         }
     }
     fn on_timeout(&mut self, _id: TimerId) -> Vec<Action<V>> {
-        // Pure learner doesn’t use timers.
         vec![]
     }
 }

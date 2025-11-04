@@ -24,9 +24,6 @@ impl<V: Clone> Acceptor<V> {
             learners,
         }
     }
-
-    /// Broadcast any message to all learners (like proposer’s queue_to_majority).
-    /// Requires PaxosMsg<V>: Clone to reuse the message per recipient.
     fn learners_broadcast(&self, msg: PaxosMsg<V>) -> Vec<Action<V>>
     where
         PaxosMsg<V>: Clone,
@@ -68,9 +65,6 @@ where
                 }
                 vec![]
             }
-
-            // ACCEPT REQUEST: accept iff proposal_id >= latest_promise
-            // NOTE: If your enum uses a different variant name/shape, adjust accordingly.
             PaxosMsg::AcceptProposal { proposal_id, value } => {
                 let can_accept = self
                     .latest_promise
@@ -79,29 +73,20 @@ where
                 if !can_accept {
                     return vec![]; // or NACK if you have one
                 }
-
-                // Record acceptance
                 let accepted = Proposal { id: proposal_id, value: value.clone() };
                 self.latest_promise = Some(proposal_id);
                 self.latest_accepted_proposal = Some(accepted.clone());
-
-                // Tell learners (shape depends on your PaxosMsg)
-                // If you have a dedicated Learn/Chosen message, use that.
-                // Example with a hypothetical Learn message:
                 return self.learners_broadcast(PaxosMsg::Learn {
                     proposal_id,
                     value
                 });
 
             }
-
-            // Anything else is ignored by acceptor
             _ => vec![],
         }
     }
 
     fn on_timeout(&mut self, _id: TimerId) -> Vec<Action<V>> {
-        // Acceptors typically do nothing on timeout.
         vec![]
     }
 }
